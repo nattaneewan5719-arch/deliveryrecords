@@ -75,7 +75,17 @@
   .page{max-width:1100px;margin:0 auto;padding:18px 20px 80px;}
 
   /* ---------- header ---------- */
-  .app-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 2px 8px;}
+  .app-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 2px 8px;}
+  .header-left{display:flex;flex-direction:column;align-items:flex-start;gap:12px;}
+  .brand-logo-card{
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:10px 18px;box-shadow:var(--shadow-md);
+  }
+  .brand-logo-card img{
+    height:38px;width:auto;display:block;
+    filter:drop-shadow(0 3px 6px rgba(0,0,0,.4));
+  }
   .btn-add-data{
     display:inline-flex;align-items:center;gap:9px;background:var(--accent);color:#fff;border:none;
     padding:9px 20px 9px 9px;border-radius:999px;font-weight:700;font-size:.92rem;cursor:pointer;
@@ -368,7 +378,10 @@
 <body>
 <div class="page">
   <div class="app-header">
-    <button class="btn-add-data" id="btn-add"><span class="add-icon-circle">+</span> เพิ่มข้อมูลลูกค้า</button>
+    <div class="header-left">
+      <button class="btn-add-data" id="btn-add"><span class="add-icon-circle">+</span> เพิ่มข้อมูลลูกค้า</button>
+      <div class="brand-logo-card"><img src="logo-tmt.png" alt="TMT"></div>
+    </div>
     <div class="header-tools">
       <div class="conn-badge"><span class="conn-dot" id="conn-dot"></span><span id="conn-text">กำลังเชื่อมต่อ...</span></div>
       <div class="storage-meter" id="storage-meter">
