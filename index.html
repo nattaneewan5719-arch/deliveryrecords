@@ -75,17 +75,7 @@
   .page{max-width:1100px;margin:0 auto;padding:18px 20px 80px;}
 
   /* ---------- header ---------- */
-  .app-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 2px 8px;}
-  .header-left{display:flex;flex-direction:column;align-items:flex-start;gap:12px;}
-  .brand-logo-card{
-    display:inline-flex;align-items:center;justify-content:center;
-    background:var(--surface);border:1px solid var(--border);border-radius:14px;
-    padding:10px 18px;box-shadow:var(--shadow-md);
-  }
-  .brand-logo-card img{
-    height:38px;width:auto;display:block;
-    filter:drop-shadow(0 3px 6px rgba(0,0,0,.4));
-  }
+  .app-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 2px 8px;}
   .btn-add-data{
     display:inline-flex;align-items:center;gap:9px;background:var(--accent);color:#fff;border:none;
     padding:9px 20px 9px 9px;border-radius:999px;font-weight:700;font-size:.92rem;cursor:pointer;
@@ -120,11 +110,7 @@
 
   /* ---------- hero ---------- */
   .hero{text-align:center;padding:10px 0 30px;}
-  .hero-graphic{position:relative;width:300px;max-width:82vw;margin:0 auto 6px;}
-  .hero-logo{
-    position:relative;z-index:2;height:60px;width:auto;display:block;margin:0 auto -14px;
-    filter:drop-shadow(0 10px 16px rgba(0,0,0,.55));
-  }
+  .hero-graphic{position:relative;width:320px;max-width:86vw;margin:0 auto 6px;}
   .hero-truck{
     display:block;width:100%;height:auto;position:relative;z-index:1;
     filter:drop-shadow(0 14px 22px rgba(0,0,0,.45));
@@ -382,10 +368,7 @@
 <body>
 <div class="page">
   <div class="app-header">
-    <div class="header-left">
-      <button class="btn-add-data" id="btn-add"><span class="add-icon-circle">+</span> เพิ่มข้อมูลลูกค้า</button>
-      <div class="brand-logo-card"><img src="logo-tmt.png" alt="TMT"></div>
-    </div>
+    <button class="btn-add-data" id="btn-add"><span class="add-icon-circle">+</span> เพิ่มข้อมูลลูกค้า</button>
     <div class="header-tools">
       <div class="conn-badge"><span class="conn-dot" id="conn-dot"></span><span id="conn-text">กำลังเชื่อมต่อ...</span></div>
       <div class="storage-meter" id="storage-meter">
@@ -416,21 +399,20 @@
 
   <div class="hero">
     <div class="hero-graphic">
-      <img class="hero-logo" src="logo-tmt.png" alt="TMT">
-      <svg class="hero-truck" viewBox="0 0 320 180" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <svg class="hero-truck" viewBox="0 0 340 190" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true">
         <defs>
           <linearGradient id="cabGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stop-color="#5fb6f5"/>
             <stop offset="1" stop-color="#1f6fb8"/>
           </linearGradient>
-          <linearGradient id="steelGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#f0f3f6"/>
-            <stop offset=".55" stop-color="#aab3bd"/>
-            <stop offset="1" stop-color="#707986"/>
+          <linearGradient id="boxGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ffffff"/>
+            <stop offset=".6" stop-color="#eef1f5"/>
+            <stop offset="1" stop-color="#d3d9df"/>
           </linearGradient>
-          <linearGradient id="bedGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#3f4c5c"/>
-            <stop offset="1" stop-color="#222a34"/>
+          <linearGradient id="doorGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#e2e7ec"/>
+            <stop offset="1" stop-color="#c3cad2"/>
           </linearGradient>
           <radialGradient id="shadowGrad" cx="50%" cy="50%" r="50%">
             <stop offset="0" stop-color="#000000" stop-opacity=".4"/>
@@ -439,51 +421,71 @@
         </defs>
 
         <!-- ground shadow -->
-        <ellipse cx="172" cy="163" rx="142" ry="10" fill="url(#shadowGrad)"/>
+        <ellipse cx="180" cy="173" rx="152" ry="10" fill="url(#shadowGrad)"/>
 
         <!-- wheels -->
         <g>
-          <circle cx="55" cy="145" r="19" fill="#12161c"/>
-          <circle cx="55" cy="145" r="8" fill="#9aa3ad"/>
-          <circle cx="228" cy="145" r="19" fill="#12161c"/>
-          <circle cx="228" cy="145" r="8" fill="#9aa3ad"/>
-          <circle cx="262" cy="145" r="19" fill="#12161c"/>
-          <circle cx="262" cy="145" r="8" fill="#9aa3ad"/>
+          <circle cx="55" cy="155" r="19" fill="#12161c"/>
+          <circle cx="55" cy="155" r="8" fill="#9aa3ad"/>
+          <circle cx="250" cy="155" r="19" fill="#12161c"/>
+          <circle cx="250" cy="155" r="8" fill="#9aa3ad"/>
+          <circle cx="282" cy="155" r="19" fill="#12161c"/>
+          <circle cx="282" cy="155" r="8" fill="#9aa3ad"/>
         </g>
 
         <!-- chassis frame -->
-        <rect x="40" y="128" width="252" height="8" fill="#1c2430"/>
+        <rect x="40" y="138" width="272" height="8" fill="#1c2430"/>
 
-        <!-- flatbed deck -->
-        <rect x="96" y="112" width="196" height="16" rx="2" fill="url(#bedGrad)" stroke="#161b21"/>
+        <!-- container corner posts -->
+        <rect x="106" y="44" width="7" height="94" fill="#8a95a3"/>
+        <rect x="299" y="44" width="7" height="94" fill="#8a95a3"/>
 
-        <!-- steel pipe bundle -->
-        <g stroke="#5b6572">
-          <rect x="100" y="86" width="182" height="26" rx="13" fill="url(#steelGrad)"/>
-          <circle cx="113" cy="99" r="13" fill="#c7ced6"/>
-          <rect x="112" y="62" width="158" height="24" rx="12" fill="url(#steelGrad)"/>
-          <circle cx="124" cy="74" r="12" fill="#ccd3da"/>
-          <rect x="140" y="40" width="112" height="22" rx="11" fill="url(#steelGrad)"/>
-          <circle cx="151" cy="51" r="11" fill="#d3d9df"/>
+        <!-- container box -->
+        <rect x="113" y="44" width="186" height="94" fill="url(#boxGrad)" stroke="#b7bfc7"/>
+        <rect x="113" y="44" width="186" height="5" fill="#ffffff" opacity=".7"/>
+
+        <!-- corrugation ridges -->
+        <g stroke="#c7ced6" stroke-width="1" opacity=".55">
+          <line x1="126" y1="49" x2="126" y2="118"/>
+          <line x1="139" y1="49" x2="139" y2="118"/>
+          <line x1="152" y1="49" x2="152" y2="118"/>
+          <line x1="165" y1="49" x2="165" y2="118"/>
+          <line x1="178" y1="49" x2="178" y2="118"/>
+          <line x1="191" y1="49" x2="191" y2="118"/>
+          <line x1="204" y1="49" x2="204" y2="118"/>
+          <line x1="217" y1="49" x2="217" y2="118"/>
+          <line x1="230" y1="49" x2="230" y2="118"/>
+          <line x1="243" y1="49" x2="243" y2="118"/>
+          <line x1="256" y1="49" x2="256" y2="118"/>
+          <line x1="269" y1="49" x2="269" y2="118"/>
+          <line x1="282" y1="49" x2="282" y2="118"/>
         </g>
-        <rect x="150" y="38" width="8" height="76" rx="2" fill="#20262e" opacity=".85"/>
-        <rect x="230" y="60" width="8" height="54" rx="2" fill="#20262e" opacity=".85"/>
-        <rect x="107" y="90" width="168" height="4" rx="2" fill="#ffffff" opacity=".3"/>
-        <rect x="118" y="66" width="145" height="3.5" rx="1.75" fill="#ffffff" opacity=".3"/>
+
+        <!-- rear doors -->
+        <rect x="284" y="44" width="15" height="94" fill="url(#doorGrad)"/>
+        <line x1="291.5" y1="46" x2="291.5" y2="136" stroke="#9aa3ad" stroke-width="1.4"/>
+        <rect x="286" y="88" width="3" height="10" rx="1.5" fill="#5b6572"/>
+        <rect x="295" y="88" width="3" height="10" rx="1.5" fill="#5b6572"/>
+
+        <!-- TMT livery panel + logo -->
+        <rect x="150" y="55" width="112" height="52" rx="8" fill="#ffffff"/>
+        <image href="logo-tmt.png" xlink:href="logo-tmt.png" x="158" y="58" width="96" height="46" preserveAspectRatio="xMidYMid meet"/>
+
+        <!-- bottom brand stripe -->
+        <rect x="113" y="118" width="186" height="12" fill="#f15a24"/>
+        <rect x="113" y="130" width="186" height="4" fill="#0c3b5d"/>
 
         <!-- cab hood -->
-        <path d="M18 128 V108 Q18 98 28 98 H45 V128 Z" fill="url(#cabGrad)" stroke="#154a7a"/>
+        <path d="M18 138 V118 Q18 108 28 108 H43 V138 Z" fill="url(#cabGrad)" stroke="#154a7a"/>
         <!-- cab -->
-        <rect x="45" y="58" width="58" height="70" rx="10" fill="url(#cabGrad)" stroke="#154a7a"/>
-        <path d="M54 66 H92 Q94 66 94 70 V88 H54 Z" fill="#dff1ff" opacity=".85"/>
-        <line x1="74" y1="66" x2="74" y2="126" stroke="#154a7a" stroke-width="1.5" opacity=".6"/>
-        <rect x="45" y="112" width="58" height="8" fill="#f15a24"/>
-        <rect x="39" y="62" width="5" height="11" rx="2" fill="#1c2430"/>
-        <circle cx="41.5" cy="60" r="3.5" fill="#1c2430"/>
-        <circle cx="22" cy="112" r="6" fill="#ffe28a" stroke="#c9a227"/>
-        <rect x="9" y="120" width="36" height="10" rx="3" fill="#1c2430"/>
-        <rect x="103" y="44" width="6" height="22" rx="2" fill="#8a95a3"/>
-        <ellipse cx="106" cy="43" rx="4" ry="2.4" fill="#5b6572"/>
+        <rect x="43" y="68" width="58" height="70" rx="10" fill="url(#cabGrad)" stroke="#154a7a"/>
+        <path d="M52 76 H90 Q92 76 92 80 V98 H52 Z" fill="#dff1ff" opacity=".85"/>
+        <line x1="72" y1="76" x2="72" y2="136" stroke="#154a7a" stroke-width="1.5" opacity=".6"/>
+        <rect x="43" y="122" width="58" height="8" fill="#f15a24"/>
+        <rect x="37" y="72" width="5" height="11" rx="2" fill="#1c2430"/>
+        <circle cx="39.5" cy="70" r="3.5" fill="#1c2430"/>
+        <circle cx="22" cy="122" r="6" fill="#ffe28a" stroke="#c9a227"/>
+        <rect x="9" y="130" width="36" height="10" rx="3" fill="#1c2430"/>
       </svg>
     </div>
     <h1>ระบบปฏิบัติการส่งสินค้า</h1>
