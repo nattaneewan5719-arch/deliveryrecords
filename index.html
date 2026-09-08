@@ -662,8 +662,8 @@
   var ICON_GLOBE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M3 12h18" stroke="currentColor" stroke-width="1.8"/><path d="M12 3c2.6 2.7 4 6 4 9s-1.4 6.3-4 9c-2.6-2.7-4-6-4-9s1.4-6.3 4-9Z" stroke="currentColor" stroke-width="1.6"/></svg>';
 
   function groupAvatarIcon(name){
-    var n = String(name||'');
-    if(n.indexOf('ต่างประเทศ') !== -1 || n.indexOf('ต่างชาติ') !== -1) return ICON_GLOBE;
+    var n = String(name||'').toLowerCase();
+    if(n.indexOf('ต่างประเทศ') !== -1 || n.indexOf('ต่างชาติ') !== -1 || n.indexOf('foreign') !== -1 || n.indexOf('export') !== -1 || n.indexOf('international') !== -1) return ICON_GLOBE;
     return ICON_PERSON;
   }
 
@@ -815,7 +815,7 @@
 
     var html = '<button type="button" class="group-pill" data-group="all" aria-pressed="' + (filters.group==='all') + '">' +
         '<span class="pill-avatar pill-avatar-all">' + ICON_ALL + '</span>' +
-        '<span class="pill-text"><span class="pill-label">ทั้งหมด</span><span class="pill-count">' + STATE.records.length + '</span></span>' +
+        '<span class="pill-text"><span class="pill-label">All</span><span class="pill-count">' + STATE.records.length + '</span></span>' +
       '</button>';
     STATE.groups.forEach(function(g){
       var hue = g.hue % 6;
