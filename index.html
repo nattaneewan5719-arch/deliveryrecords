@@ -172,24 +172,6 @@
   .dp-clear:hover{text-decoration:underline;}
 
   .group-tabs{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:22px;}
-
-  .country-tabs{display:none;justify-content:center;gap:8px;flex-wrap:wrap;margin:-10px auto 22px;max-width:900px;}
-  .country-pill{
-    display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);
-    border-radius:999px;padding:6px 13px;cursor:pointer;font-size:.82rem;color:var(--ink-dim);
-    transition:transform .12s ease, background .15s ease, border-color .15s ease, color .15s ease;
-  }
-  .country-pill:hover{transform:translateY(-1px);border-color:var(--accent);}
-  .country-pill .flag{font-size:1.05rem;line-height:1;}
-  .country-pill .cnt{font-family:var(--font-mono);font-size:.72rem;color:var(--ink-dim);}
-  .country-pill[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff;}
-  .country-pill[aria-pressed="true"] .cnt{color:rgba(255,255,255,.85);}
-
-  .badge-country{
-    display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:999px;font-size:.76rem;
-    font-weight:600;background:var(--surface-2);border:1px solid var(--border);color:var(--ink);
-  }
-
   .group-pill{
     display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);
     border-radius:999px;padding:7px 18px 7px 7px;cursor:pointer;
@@ -539,7 +521,6 @@
   </div>
 
   <div class="group-tabs" id="group-tabs"></div>
-  <div class="country-tabs" id="country-tabs"></div>
 
   <div class="result-count" id="result-count"></div>
 
@@ -578,10 +559,6 @@
           <label>เลือกกลุ่มลูกค้า</label>
           <div class="group-toggle-row" id="rf-group-toggle"></div>
           <input type="hidden" id="rf-group">
-        </div>
-        <div class="full" id="rf-country-wrap" style="display:none;">
-          <label for="rf-country">ประเทศ</label>
-          <select class="field" id="rf-country"></select>
         </div>
         <div>
           <label for="rf-date">วันที่ส่งสินค้า</label>
@@ -690,33 +667,8 @@
     return ICON_PERSON;
   }
 
-  var COUNTRIES = [
-    { code:'CN', name:'China', flag:'🇨🇳' },
-    { code:'TW', name:'Taiwan', flag:'🇹🇼' },
-    { code:'HK', name:'Hong Kong', flag:'🇭🇰' },
-    { code:'JP', name:'Japan', flag:'🇯🇵' },
-    { code:'KR', name:'South Korea', flag:'🇰🇷' },
-    { code:'VN', name:'Vietnam', flag:'🇻🇳' },
-    { code:'MM', name:'Myanmar', flag:'🇲🇲' },
-    { code:'LA', name:'Laos', flag:'🇱🇦' },
-    { code:'KH', name:'Cambodia', flag:'🇰🇭' },
-    { code:'MY', name:'Malaysia', flag:'🇲🇾' },
-    { code:'SG', name:'Singapore', flag:'🇸🇬' },
-    { code:'ID', name:'Indonesia', flag:'🇮🇩' },
-    { code:'PH', name:'Philippines', flag:'🇵🇭' },
-    { code:'IN', name:'India', flag:'🇮🇳' },
-    { code:'US', name:'United States', flag:'🇺🇸' },
-    { code:'GB', name:'United Kingdom', flag:'🇬🇧' },
-    { code:'AU', name:'Australia', flag:'🇦🇺' },
-    { code:'OTHER', name:'Other', flag:'🌐' }
-  ];
-  function countryByCode(code){
-    for(var i=0;i<COUNTRIES.length;i++){ if(COUNTRIES[i].code===code) return COUNTRIES[i]; }
-    return null;
-  }
-
   var STATE = { groups: [], records: [] };
-  var filters = { group:'all', q:'', date:'', country:'' };
+  var filters = { group:'all', q:'', date:'' };
   var modalMode = null; // 'add' | 'edit'
   var editingId = null;
   var pendingImages = [];
@@ -856,32 +808,6 @@
     return null;
   }
 
-  function isForeignGroupId(id){
-    var g = groupById(id);
-    return !!g && String(g.name||'').trim().toLowerCase() === 'foreign';
-  }
-
-  function renderCountryTabs(){
-    var wrap = $('#country-tabs');
-    if(!isForeignGroupId(filters.group)){
-      wrap.style.display = 'none';
-      wrap.innerHTML = '';
-      return;
-    }
-    wrap.style.display = 'flex';
-    var counts = {};
-    STATE.records.forEach(function(r){
-      if(r.groupId === filters.group && r.country){ counts[r.country] = (counts[r.country]||0)+1; }
-    });
-    var html = '<button type="button" class="country-pill" data-country="" aria-pressed="' + (!filters.country) + '"><span class="flag">🌐</span><span>All</span></button>';
-    COUNTRIES.forEach(function(c){
-      html += '<button type="button" class="country-pill" data-country="' + c.code + '" aria-pressed="' + (filters.country===c.code) + '">' +
-        '<span class="flag">' + c.flag + '</span><span>' + esc(c.name) + '</span><span class="cnt">' + (counts[c.code]||0) + '</span>' +
-      '</button>';
-    });
-    wrap.innerHTML = html;
-  }
-
   function renderGroupTabs(){
     var wrap = $('#group-tabs');
     var counts = {};
@@ -917,22 +843,11 @@
       '</button>';
     }).join('');
     $('#rf-group').value = selectedId;
-    var countryWrap = $('#rf-country-wrap');
-    if(countryWrap) countryWrap.style.display = isForeignGroupId(selectedId) ? '' : 'none';
-  }
-
-  function populateCountrySelect(){
-    var sel = $('#rf-country');
-    if(!sel) return;
-    sel.innerHTML = '<option value="">— เลือกประเทศ —</option>' + COUNTRIES.map(function(c){
-      return '<option value="' + c.code + '">' + c.flag + ' ' + esc(c.name) + '</option>';
-    }).join('');
   }
 
   function getFiltered(){
     return STATE.records.filter(function(r){
       if(filters.group !== 'all' && r.groupId !== filters.group) return false;
-      if(filters.country && r.country !== filters.country) return false;
       if(filters.q){
         var needle = normalize(filters.q);
         var hay = normalize(r.name + ' ' + r.plate + ' ' + (r.address||'') + ' ' + (r.district||'') + ' ' + (r.province||''));
@@ -950,7 +865,6 @@
 
   function renderRecordCard(r){
     var group = groupById(r.groupId);
-    var country = r.country ? countryByCode(r.country) : null;
     var imagesHtml = (r.images && r.images.length)
       ? '<div class="record-images">' + r.images.map(function(src,i){
           return '<img src="' + src + '" alt="" data-action="view-images" data-id="' + esc(r.id) + '" data-index="' + i + '">';
@@ -963,7 +877,6 @@
         '<div class="record-top-row">' +
           '<div class="record-badges">' +
             chipHtml(group) +
-            (country ? '<span class="badge-country">' + country.flag + ' ' + esc(country.name) + '</span>' : '') +
             (r.affiliation ? '<span class="badge-affiliation">' + esc(r.affiliation) + '</span>' : '') +
             '<span class="badge-plate">' + ICON_TRUCK + esc(r.plate) + '</span>' +
           '</div>' +
@@ -991,7 +904,6 @@
 
   function render(){
     renderGroupTabs();
-    renderCountryTabs();
     refreshStorageMeter();
 
     var list = getFiltered();
@@ -1056,7 +968,6 @@
     $('#record-form').reset();
     $('#rf-date').value = todayISO();
     renderGroupToggle(filters.group !== 'all' ? filters.group : null);
-    if($('#rf-country')) $('#rf-country').value = isForeignGroupId($('#rf-group').value) ? (filters.country||'') : '';
     renderPreviewGrid();
     openModal('modal-record');
     $('#rf-name').focus();
@@ -1075,7 +986,6 @@
     $('#rf-address').value = r.address || '';
     $('#rf-district').value = r.district || '';
     $('#rf-province').value = r.province || '';
-    if($('#rf-country')) $('#rf-country').value = r.country || '';
     renderPreviewGrid();
     openModal('modal-record');
   }
@@ -1142,12 +1052,11 @@
     var address = $('#rf-address').value.trim();
     var district = $('#rf-district').value.trim();
     var province = $('#rf-province').value.trim();
-    var country = (isForeignGroupId(groupId) && $('#rf-country')) ? $('#rf-country').value : '';
     if(!groupId){ showToast('กรุณาเลือกกลุ่มลูกค้า', true); return; }
     if(!name || !plate || !date){ showToast('กรุณากรอกชื่อ ทะเบียน และวันที่ให้ครบ', true); return; }
 
     var payload = {
-      groupId: groupId, name: name, plate: plate, date: date, country: country,
+      groupId: groupId, name: name, plate: plate, date: date,
       affiliation: affiliation, address: address, district: district, province: province,
       images: pendingImages.slice(), updatedAt: Date.now()
     };
@@ -1352,19 +1261,7 @@
       var addBtn = e.target.closest('#tab-add-group');
       var pill = e.target.closest('.group-pill[data-group]');
       if(addBtn){ renderGroupsManage(); openModal('modal-groups'); return; }
-      if(pill){
-        var newGroup = pill.getAttribute('data-group');
-        if(newGroup !== filters.group) filters.country = '';
-        filters.group = newGroup;
-        render();
-      }
-    });
-
-    $('#country-tabs').addEventListener('click', function(e){
-      var pill = e.target.closest('.country-pill[data-country]');
-      if(!pill) return;
-      filters.country = pill.getAttribute('data-country');
-      render();
+      if(pill){ filters.group = pill.getAttribute('data-group'); render(); }
     });
 
     $('#btn-groups').addEventListener('click', function(){ renderGroupsManage(); openModal('modal-groups'); });
@@ -1410,7 +1307,7 @@
     });
 
     $('#btn-clear').addEventListener('click', function(){
-      filters = { group:'all', q:'', date:'', country:'' };
+      filters = { group:'all', q:'', date:'' };
       $('#f-search').value='';
       updateDateLabel();
       closeDatePopover();
@@ -1435,7 +1332,6 @@
   }
 
   bindEvents();
-  populateCountrySelect();
   render();
   initSync();
 })();
