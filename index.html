@@ -675,6 +675,7 @@
   var lightboxImages = [];
   var lightboxIndex = 0;
   var groupsSeeded = false;
+  var recordsLoaded = false;
 
   function $(sel, root){ return (root||document).querySelector(sel); }
   function $all(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
@@ -916,9 +917,11 @@
     if(list.length === 0){
       listEl.innerHTML = '';
       emptyEl.style.display = '';
-      emptyText.textContent = STATE.records.length === 0
-        ? 'ยังไม่มีข้อมูลลูกค้า เริ่มเพิ่มรายการแรกได้เลย'
-        : 'ไม่พบข้อมูลที่ตรงกับตัวกรอง ลองล้างตัวกรองดู';
+      emptyText.textContent = !recordsLoaded
+        ? 'กำลังโหลดข้อมูล...'
+        : (STATE.records.length === 0
+          ? 'ยังไม่มีข้อมูลลูกค้า เริ่มเพิ่มรายการแรกได้เลย'
+          : 'ไม่พบข้อมูลที่ตรงกับตัวกรอง ลองล้างตัวกรองดู');
     } else {
       emptyEl.style.display = 'none';
       listEl.innerHTML = list.map(renderRecordCard).join('');
@@ -950,11 +953,14 @@
 
     db.collection('records').onSnapshot(function(snap){
       setConnStatus('online', 'เชื่อมต่อแล้ว');
+      recordsLoaded = true;
       STATE.records = snap.docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); });
       render();
     }, function(err){
       setConnStatus('error', 'เชื่อมต่อไม่สำเร็จ');
+      recordsLoaded = true;
       showToast('เชื่อมต่อฐานข้อมูลรายการไม่สำเร็จ: ' + err.message, true);
+      render();
     });
   }
 
