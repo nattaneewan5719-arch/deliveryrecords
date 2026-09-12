@@ -700,10 +700,13 @@
   var recordsLoaded = false;
 
   // Legacy records only have a flat `images` array (from before the origin/destination
-  // split). New/edited records have imagesOrigin + imagesDest. Until a legacy record is
-  // edited and re-saved, show its existing photos under both tabs.
+  // split) and have not been separated into origin/destination yet. New/edited records
+  // have imagesOrigin + imagesDest explicitly (possibly empty arrays).
+  function isSplitRecord(r){
+    return r.imagesOrigin !== undefined || r.imagesDest !== undefined;
+  }
   function getRecordImageSets(r){
-    if(r.imagesOrigin !== undefined || r.imagesDest !== undefined){
+    if(isSplitRecord(r)){
       return { origin: r.imagesOrigin || [], dest: r.imagesDest || [] };
     }
     var legacy = r.images || [];
@@ -900,18 +903,29 @@
   function renderRecordCard(r){
     var group = groupById(r.groupId);
     var imgSets = getRecordImageSets(r);
-    var activeTab = cardImageTab[r.id] === 'dest' ? 'dest' : 'origin';
-    var activeImages = activeTab === 'dest' ? imgSets.dest : imgSets.origin;
-    var imgTabsHtml =
-      '<div class="img-tab-row">' +
-        '<button type="button" class="img-tab-btn' + (activeTab==='origin'?' active':'') + '" data-imgtab="origin" data-id="' + esc(r.id) + '">' + ICON_ORIGIN + 'ต้นทาง <span class="tcount">(' + imgSets.origin.length + ')</span></button>' +
-        '<button type="button" class="img-tab-btn' + (activeTab==='dest'?' active':'') + '" data-imgtab="dest" data-id="' + esc(r.id) + '">' + ICON_DEST + 'ปลายทาง <span class="tcount">(' + imgSets.dest.length + ')</span></button>' +
-      '</div>';
-    var imagesHtml = imgTabsHtml + (activeImages.length
-      ? '<div class="record-images">' + activeImages.map(function(src,i){
-          return '<img src="' + src + '" alt="" data-action="view-images" data-id="' + esc(r.id) + '" data-index="' + i + '">';
-        }).join('') + '</div>'
-      : '<div class="record-images-empty">ยังไม่มีรูป' + (activeTab==='dest'?'ปลายทาง':'ต้นทาง') + '</div>');
+    var imagesHtml;
+    if(isSplitRecord(r)){
+      var activeTab = cardImageTab[r.id] === 'dest' ? 'dest' : 'origin';
+      var activeImages = activeTab === 'dest' ? imgSets.dest : imgSets.origin;
+      var imgTabsHtml =
+        '<div class="img-tab-row">' +
+          '<button type="button" class="img-tab-btn' + (activeTab==='origin'?' active':'') + '" data-imgtab="origin" data-id="' + esc(r.id) + '">' + ICON_ORIGIN + 'ต้นทาง <span class="tcount">(' + imgSets.origin.length + ')</span></button>' +
+          '<button type="button" class="img-tab-btn' + (activeTab==='dest'?' active':'') + '" data-imgtab="dest" data-id="' + esc(r.id) + '">' + ICON_DEST + 'ปลายทาง <span class="tcount">(' + imgSets.dest.length + ')</span></button>' +
+        '</div>';
+      imagesHtml = imgTabsHtml + (activeImages.length
+        ? '<div class="record-images">' + activeImages.map(function(src,i){
+            return '<img src="' + src + '" alt="" data-action="view-images" data-id="' + esc(r.id) + '" data-index="' + i + '">';
+          }).join('') + '</div>'
+        : '<div class="record-images-empty">ยังไม่มีรูป' + (activeTab==='dest'?'ปลายทาง':'ต้นทาง') + '</div>');
+    } else {
+      // Not yet separated into origin/destination — show as one plain set, same as before.
+      var all = imgSets.origin;
+      imagesHtml = all.length
+        ? '<div class="record-images">' + all.map(function(src,i){
+            return '<img src="' + src + '" alt="" data-action="view-images" data-id="' + esc(r.id) + '" data-index="' + i + '">';
+          }).join('') + '</div>'
+        : '';
+    }
     var locSub = [r.district, r.province].filter(Boolean).join(' ');
     var addressText = r.address ? esc(r.address) : '<span class="muted">— ไม่ระบุ —</span>';
     return (
