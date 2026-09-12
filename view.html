@@ -219,9 +219,21 @@
 
   .record-note{font-size:.85rem;color:var(--ink-dim);font-style:italic;}
 
+  .img-tab-row{display:flex;gap:8px;margin-bottom:2px;}
+  .img-tab-btn{
+    display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;
+    border:1px solid var(--border);background:var(--surface-2);color:var(--ink-dim);
+    font-size:.78rem;font-weight:600;cursor:pointer;flex:none;
+    transition:background .15s ease,color .15s ease,border-color .15s ease;
+  }
+  .img-tab-btn:hover{border-color:var(--accent);color:var(--ink);}
+  .img-tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .img-tab-btn .tcount{opacity:.75;font-weight:500;}
+
   .record-images{display:flex;gap:10px;overflow-x:auto;padding-bottom:2px;}
   .record-images img{width:148px;height:106px;object-fit:cover;border-radius:12px;flex:none;cursor:pointer;border:1px solid var(--border);transition:transform .15s ease;display:block;}
   .record-images img:hover{transform:scale(1.03);}
+  .record-images-empty{font-size:.8rem;color:var(--ink-dim);font-style:italic;padding:6px 2px;}
 
   .empty-state{
     text-align:center;padding:56px 20px;color:var(--ink-dim);border:1px dashed var(--border);
@@ -475,12 +487,26 @@
     if(n.indexOf('ต่างประเทศ') !== -1 || n.indexOf('ต่างชาติ') !== -1 || n.indexOf('foreign') !== -1 || n.indexOf('export') !== -1 || n.indexOf('international') !== -1) return ICON_GLOBE;
     return ICON_PERSON;
   }
+  var ICON_ORIGIN = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex:none;"><path d="M12 15V4m0 0 4 4m-4-4L8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var ICON_DEST = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex:none;"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="9.5" r="2.4" stroke="currentColor" stroke-width="1.6"/></svg>';
 
   var STATE = { groups: [], records: [] };
   var filters = { group:'all', q:'', date:'' };
   var lightboxImages = [];
   var lightboxIndex = 0;
   var recordsLoaded = false;
+  var cardImageTab = {}; // recordId -> 'origin' | 'dest'
+
+  // Legacy records only have a flat `images` array (from before the origin/destination
+  // split). New/edited records have imagesOrigin + imagesDest. Until a legacy record is
+  // edited and re-saved, show its existing photos under both tabs.
+  function getRecordImageSets(r){
+    if(r.imagesOrigin !== undefined || r.imagesDest !== undefined){
+      return { origin: r.imagesOrigin || [], dest: r.imagesDest || [] };
+    }
+    var legacy = r.images || [];
+    return { origin: legacy, dest: legacy };
+  }
 
   function $(sel, root){ return (root||document).querySelector(sel); }
   function $all(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
@@ -638,11 +664,19 @@
 
   function renderRecordCard(r){
     var group = groupById(r.groupId);
-    var imagesHtml = (r.images && r.images.length)
-      ? '<div class="record-images">' + r.images.map(function(src,i){
+    var imgSets = getRecordImageSets(r);
+    var activeTab = cardImageTab[r.id] === 'dest' ? 'dest' : 'origin';
+    var activeImages = activeTab === 'dest' ? imgSets.dest : imgSets.origin;
+    var imgTabsHtml =
+      '<div class="img-tab-row">' +
+        '<button type="button" class="img-tab-btn' + (activeTab==='origin'?' active':'') + '" data-imgtab="origin" data-id="' + esc(r.id) + '">' + ICON_ORIGIN + 'ต้นทาง <span class="tcount">(' + imgSets.origin.length + ')</span></button>' +
+        '<button type="button" class="img-tab-btn' + (activeTab==='dest'?' active':'') + '" data-imgtab="dest" data-id="' + esc(r.id) + '">' + ICON_DEST + 'ปลายทาง <span class="tcount">(' + imgSets.dest.length + ')</span></button>' +
+      '</div>';
+    var imagesHtml = imgTabsHtml + (activeImages.length
+      ? '<div class="record-images">' + activeImages.map(function(src,i){
           return '<img src="' + src + '" alt="" data-action="view-images" data-id="' + esc(r.id) + '" data-index="' + i + '">';
         }).join('') + '</div>'
-      : '';
+      : '<div class="record-images-empty">ยังไม่มีรูป' + (activeTab==='dest'?'ปลายทาง':'ต้นทาง') + '</div>');
     var locSub = [r.district, r.province].filter(Boolean).join(' ');
     var addressText = r.address ? esc(r.address) : '<span class="muted">— ไม่ระบุ —</span>';
     return (
@@ -770,10 +804,21 @@
     });
 
     $('#record-list').addEventListener('click', function(e){
+      var tabBtn = e.target.closest('[data-imgtab]');
+      if(tabBtn){
+        cardImageTab[tabBtn.getAttribute('data-id')] = tabBtn.getAttribute('data-imgtab');
+        render();
+        return;
+      }
       var imgEl = e.target.closest('[data-action="view-images"]');
       if(!imgEl) return;
       var r = STATE.records.find(function(x){ return x.id === imgEl.getAttribute('data-id'); });
-      if(r && r.images && r.images.length) openLightbox(r.images, Number(imgEl.getAttribute('data-index'))||0);
+      if(r){
+        var sets = getRecordImageSets(r);
+        var tab = cardImageTab[r.id] === 'dest' ? 'dest' : 'origin';
+        var imgs = tab === 'dest' ? sets.dest : sets.origin;
+        if(imgs.length) openLightbox(imgs, Number(imgEl.getAttribute('data-index'))||0);
+      }
     });
 
     $('#group-tabs').addEventListener('click', function(e){

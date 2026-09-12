@@ -230,9 +230,21 @@
 
   .record-note{font-size:.85rem;color:var(--ink-dim);font-style:italic;}
 
+  .img-tab-row{display:flex;gap:8px;margin-bottom:2px;}
+  .img-tab-btn{
+    display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;
+    border:1px solid var(--border);background:var(--surface-2);color:var(--ink-dim);
+    font-size:.78rem;font-weight:600;cursor:pointer;flex:none;
+    transition:background .15s ease,color .15s ease,border-color .15s ease;
+  }
+  .img-tab-btn:hover{border-color:var(--accent);color:var(--ink);}
+  .img-tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .img-tab-btn .tcount{opacity:.75;font-weight:500;}
+
   .record-images{display:flex;gap:10px;overflow-x:auto;padding-bottom:2px;}
   .record-images img{width:148px;height:106px;object-fit:cover;border-radius:12px;flex:none;cursor:pointer;border:1px solid var(--border);transition:transform .15s ease;display:block;}
   .record-images img:hover{transform:scale(1.03);}
+  .record-images-empty{font-size:.8rem;color:var(--ink-dim);font-style:italic;padding:6px 2px;}
 
   .empty-state{
     text-align:center;padding:56px 20px;color:var(--ink-dim);border:1px dashed var(--border);
@@ -589,10 +601,16 @@
           <input class="field" id="rf-province" type="text" maxlength="100">
         </div>
         <div class="full">
-          <label>แนบรูปภาพผลงาน (เลือกได้หลายรูป)</label>
-          <div class="dropzone" id="dropzone">คลิกเพื่อเลือกรูป หรือ ลากไฟล์รูปมาวางที่นี่</div>
-          <input type="file" id="rf-images" accept="image/*" multiple class="visually-hidden">
-          <div class="preview-grid" id="preview-grid"></div>
+          <label>รูปต้นทาง (ขึ้นสินค้า)</label>
+          <div class="dropzone" id="dropzone-origin">คลิกเพื่อเลือกรูป หรือ ลากไฟล์รูปมาวางที่นี่</div>
+          <input type="file" id="rf-images-origin" accept="image/*" multiple class="visually-hidden">
+          <div class="preview-grid" id="preview-grid-origin"></div>
+        </div>
+        <div class="full">
+          <label>รูปปลายทาง (ลงสินค้าที่ลูกค้า)</label>
+          <div class="dropzone" id="dropzone-dest">คลิกเพื่อเลือกรูป หรือ ลากไฟล์รูปมาวางที่นี่</div>
+          <input type="file" id="rf-images-dest" accept="image/*" multiple class="visually-hidden">
+          <div class="preview-grid" id="preview-grid-dest"></div>
           <div class="field-hint" id="image-size-hint"></div>
         </div>
       </div>
@@ -660,6 +678,8 @@
   var ICON_PIN = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="9.5" r="2.4" stroke="currentColor" stroke-width="1.6"/></svg>';
   var ICON_ALL = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>';
   var ICON_GLOBE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M3 12h18" stroke="currentColor" stroke-width="1.8"/><path d="M12 3c2.6 2.7 4 6 4 9s-1.4 6.3-4 9c-2.6-2.7-4-6-4-9s1.4-6.3 4-9Z" stroke="currentColor" stroke-width="1.6"/></svg>';
+  var ICON_ORIGIN = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex:none;"><path d="M12 15V4m0 0 4 4m-4-4L8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var ICON_DEST = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex:none;"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="9.5" r="2.4" stroke="currentColor" stroke-width="1.6"/></svg>';
 
   function groupAvatarIcon(name){
     var n = String(name||'').toLowerCase();
@@ -671,11 +691,24 @@
   var filters = { group:'all', q:'', date:'' };
   var modalMode = null; // 'add' | 'edit'
   var editingId = null;
-  var pendingImages = [];
+  var pendingImagesOrigin = [];
+  var pendingImagesDest = [];
+  var cardImageTab = {}; // recordId -> 'origin' | 'dest'
   var lightboxImages = [];
   var lightboxIndex = 0;
   var groupsSeeded = false;
   var recordsLoaded = false;
+
+  // Legacy records only have a flat `images` array (from before the origin/destination
+  // split). New/edited records have imagesOrigin + imagesDest. Until a legacy record is
+  // edited and re-saved, show its existing photos under both tabs.
+  function getRecordImageSets(r){
+    if(r.imagesOrigin !== undefined || r.imagesDest !== undefined){
+      return { origin: r.imagesOrigin || [], dest: r.imagesDest || [] };
+    }
+    var legacy = r.images || [];
+    return { origin: legacy, dest: legacy };
+  }
 
   function $(sel, root){ return (root||document).querySelector(sel); }
   function $all(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
@@ -791,10 +824,10 @@
   }
 
   function updateImageSizeHint(){
-    var bytes = estimateRecordBytes(pendingImages);
+    var bytes = estimateRecordBytes(pendingImagesOrigin.concat(pendingImagesDest));
     var hint = $('#image-size-hint');
     var kb = Math.round(bytes/1024);
-    hint.textContent = 'ขนาดข้อมูลรูปภาพของรายการนี้: ~' + kb + ' KB (จำกัดไม่เกิน ~' + Math.round(MAX_RECORD_BYTES/1024) + ' KB ต่อ 1 รายการ)';
+    hint.textContent = 'ขนาดข้อมูลรูปภาพของรายการนี้ (ต้นทาง+ปลายทาง): ~' + kb + ' KB (จำกัดไม่เกิน ~' + Math.round(MAX_RECORD_BYTES/1024) + ' KB ต่อ 1 รายการ)';
     hint.classList.toggle('warn', bytes > MAX_RECORD_BYTES * 0.8);
   }
 
@@ -866,11 +899,19 @@
 
   function renderRecordCard(r){
     var group = groupById(r.groupId);
-    var imagesHtml = (r.images && r.images.length)
-      ? '<div class="record-images">' + r.images.map(function(src,i){
+    var imgSets = getRecordImageSets(r);
+    var activeTab = cardImageTab[r.id] === 'dest' ? 'dest' : 'origin';
+    var activeImages = activeTab === 'dest' ? imgSets.dest : imgSets.origin;
+    var imgTabsHtml =
+      '<div class="img-tab-row">' +
+        '<button type="button" class="img-tab-btn' + (activeTab==='origin'?' active':'') + '" data-imgtab="origin" data-id="' + esc(r.id) + '">' + ICON_ORIGIN + 'ต้นทาง <span class="tcount">(' + imgSets.origin.length + ')</span></button>' +
+        '<button type="button" class="img-tab-btn' + (activeTab==='dest'?' active':'') + '" data-imgtab="dest" data-id="' + esc(r.id) + '">' + ICON_DEST + 'ปลายทาง <span class="tcount">(' + imgSets.dest.length + ')</span></button>' +
+      '</div>';
+    var imagesHtml = imgTabsHtml + (activeImages.length
+      ? '<div class="record-images">' + activeImages.map(function(src,i){
           return '<img src="' + src + '" alt="" data-action="view-images" data-id="' + esc(r.id) + '" data-index="' + i + '">';
         }).join('') + '</div>'
-      : '';
+      : '<div class="record-images-empty">ยังไม่มีรูป' + (activeTab==='dest'?'ปลายทาง':'ต้นทาง') + '</div>');
     var locSub = [r.district, r.province].filter(Boolean).join(' ');
     var addressText = r.address ? esc(r.address) : '<span class="muted">— ไม่ระบุ —</span>';
     return (
@@ -969,12 +1010,13 @@
   function closeModal(id){ $('#'+id).classList.remove('open'); }
 
   function openAddModal(){
-    modalMode = 'add'; editingId = null; pendingImages = [];
+    modalMode = 'add'; editingId = null; pendingImagesOrigin = []; pendingImagesDest = [];
     $('#record-modal-title-text').textContent = 'เพิ่มข้อมูลลูกค้า';
     $('#record-form').reset();
     $('#rf-date').value = todayISO();
     renderGroupToggle(filters.group !== 'all' ? filters.group : null);
-    renderPreviewGrid();
+    renderPreviewGrid('origin');
+    renderPreviewGrid('dest');
     openModal('modal-record');
     $('#rf-name').focus();
   }
@@ -982,7 +1024,16 @@
   function openEditModal(id){
     var r = STATE.records.find(function(x){ return x.id === id; });
     if(!r) return;
-    modalMode = 'edit'; editingId = id; pendingImages = (r.images || []).slice();
+    modalMode = 'edit'; editingId = id;
+    if(r.imagesOrigin !== undefined || r.imagesDest !== undefined){
+      pendingImagesOrigin = (r.imagesOrigin || []).slice();
+      pendingImagesDest = (r.imagesDest || []).slice();
+    } else {
+      // Legacy record: pre-load its existing photos under "ต้นทาง" so nothing is lost;
+      // "ปลายทาง" starts empty for the user to add on this edit.
+      pendingImagesOrigin = (r.images || []).slice();
+      pendingImagesDest = [];
+    }
     $('#record-modal-title-text').textContent = 'แก้ไขข้อมูลลูกค้า';
     renderGroupToggle(r.groupId);
     $('#rf-name').value = r.name;
@@ -992,13 +1043,15 @@
     $('#rf-address').value = r.address || '';
     $('#rf-district').value = r.district || '';
     $('#rf-province').value = r.province || '';
-    renderPreviewGrid();
+    renderPreviewGrid('origin');
+    renderPreviewGrid('dest');
     openModal('modal-record');
   }
 
-  function renderPreviewGrid(){
-    var grid = $('#preview-grid');
-    grid.innerHTML = pendingImages.map(function(src,i){
+  function renderPreviewGrid(kind){
+    var grid = $(kind === 'dest' ? '#preview-grid-dest' : '#preview-grid-origin');
+    var list = kind === 'dest' ? pendingImagesDest : pendingImagesOrigin;
+    grid.innerHTML = list.map(function(src,i){
       return '<div class="preview-item"><img src="' + src + '" alt=""><button type="button" data-remove-img="' + i + '" aria-label="ลบรูป">✕</button></div>';
     }).join('');
     updateImageSizeHint();
@@ -1026,21 +1079,21 @@
     });
   }
 
-  function handleFiles(fileList){
+  function handleFiles(fileList, kind){
     var files = Array.prototype.slice.call(fileList).filter(function(f){ return f.type.indexOf('image/') === 0; });
     if(!files.length) return;
     Promise.all(files.map(function(f){ return compressImage(f, 900, 0.68); }))
       .then(function(results){
-        var acc = pendingImages.slice();
-        var accBytes = estimateRecordBytes(acc);
+        var acc = (kind === 'dest' ? pendingImagesDest : pendingImagesOrigin).slice();
+        var accBytes = estimateRecordBytes(pendingImagesOrigin.concat(pendingImagesDest));
         var skipped = 0;
         for(var i=0;i<results.length;i++){
           var next = accBytes + results[i].length;
           if(next > MAX_RECORD_BYTES){ skipped = results.length - i; break; }
           acc.push(results[i]); accBytes = next;
         }
-        pendingImages = acc;
-        renderPreviewGrid();
+        if(kind === 'dest') pendingImagesDest = acc; else pendingImagesOrigin = acc;
+        renderPreviewGrid(kind);
         if(skipped > 0){
           showToast('เพิ่มรูปได้บางส่วน เนื่องจากข้อมูลของรายการนี้ใกล้เต็มขีดจำกัด (~' + Math.round(MAX_RECORD_BYTES/1024) + ' KB) กรุณาลดจำนวนรูปหรือถ่ายรูปให้ไฟล์เล็กลง', true);
         }
@@ -1064,7 +1117,7 @@
     var payload = {
       groupId: groupId, name: name, plate: plate, date: date,
       affiliation: affiliation, address: address, district: district, province: province,
-      images: pendingImages.slice(), updatedAt: Date.now()
+      imagesOrigin: pendingImagesOrigin.slice(), imagesDest: pendingImagesDest.slice(), updatedAt: Date.now()
     };
 
     var btn = $('#btn-submit-record'); btn.disabled = true;
@@ -1230,19 +1283,24 @@
 
     $('#record-form').addEventListener('submit', saveRecordForm);
 
-    $('#dropzone').addEventListener('click', function(){ $('#rf-images').click(); });
-    $('#rf-images').addEventListener('change', function(e){ handleFiles(e.target.files); e.target.value=''; });
-    $('#dropzone').addEventListener('dragover', function(e){ e.preventDefault(); $('#dropzone').classList.add('drag'); });
-    $('#dropzone').addEventListener('dragleave', function(){ $('#dropzone').classList.remove('drag'); });
-    $('#dropzone').addEventListener('drop', function(e){
-      e.preventDefault(); $('#dropzone').classList.remove('drag');
-      handleFiles(e.dataTransfer.files);
-    });
-    $('#preview-grid').addEventListener('click', function(e){
-      var btn = e.target.closest('[data-remove-img]');
-      if(!btn) return;
-      pendingImages.splice(Number(btn.getAttribute('data-remove-img')), 1);
-      renderPreviewGrid();
+    ['origin','dest'].forEach(function(kind){
+      var zone = $('#dropzone-' + kind);
+      var input = $('#rf-images-' + kind);
+      zone.addEventListener('click', function(){ input.click(); });
+      input.addEventListener('change', function(e){ handleFiles(e.target.files, kind); e.target.value=''; });
+      zone.addEventListener('dragover', function(e){ e.preventDefault(); zone.classList.add('drag'); });
+      zone.addEventListener('dragleave', function(){ zone.classList.remove('drag'); });
+      zone.addEventListener('drop', function(e){
+        e.preventDefault(); zone.classList.remove('drag');
+        handleFiles(e.dataTransfer.files, kind);
+      });
+      $('#preview-grid-' + kind).addEventListener('click', function(e){
+        var btn = e.target.closest('[data-remove-img]');
+        if(!btn) return;
+        var idx = Number(btn.getAttribute('data-remove-img'));
+        if(kind === 'dest') pendingImagesDest.splice(idx, 1); else pendingImagesOrigin.splice(idx, 1);
+        renderPreviewGrid(kind);
+      });
     });
 
     $('#rf-group-toggle').addEventListener('click', function(e){
@@ -1255,11 +1313,21 @@
       var editBtn = e.target.closest('[data-action="edit"]');
       var delBtn = e.target.closest('[data-action="delete"]');
       var imgEl = e.target.closest('[data-action="view-images"]');
+      var tabBtn = e.target.closest('[data-imgtab]');
       if(editBtn) openEditModal(editBtn.getAttribute('data-id'));
       else if(delBtn) deleteRecord(delBtn.getAttribute('data-id'));
+      else if(tabBtn){
+        cardImageTab[tabBtn.getAttribute('data-id')] = tabBtn.getAttribute('data-imgtab');
+        render();
+      }
       else if(imgEl){
         var r = STATE.records.find(function(x){ return x.id === imgEl.getAttribute('data-id'); });
-        if(r && r.images && r.images.length) openLightbox(r.images, Number(imgEl.getAttribute('data-index'))||0);
+        if(r){
+          var sets = getRecordImageSets(r);
+          var tab = cardImageTab[r.id] === 'dest' ? 'dest' : 'origin';
+          var imgs = tab === 'dest' ? sets.dest : sets.origin;
+          if(imgs.length) openLightbox(imgs, Number(imgEl.getAttribute('data-index'))||0);
+        }
       }
     });
 
