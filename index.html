@@ -601,16 +601,18 @@
           <input class="field" id="rf-province" type="text" maxlength="100">
         </div>
         <div class="full">
-          <label>รูปต้นทาง (ขึ้นสินค้า)</label>
+          <label id="lbl-images-origin">รูปต้นทาง (ขึ้นสินค้า)</label>
           <div class="dropzone" id="dropzone-origin">คลิกเพื่อเลือกรูป หรือ ลากไฟล์รูปมาวางที่นี่</div>
           <input type="file" id="rf-images-origin" accept="image/*" multiple class="visually-hidden">
           <div class="preview-grid" id="preview-grid-origin"></div>
         </div>
-        <div class="full">
+        <div class="full" id="dest-images-wrap">
           <label>รูปปลายทาง (ลงสินค้าที่ลูกค้า)</label>
           <div class="dropzone" id="dropzone-dest">คลิกเพื่อเลือกรูป หรือ ลากไฟล์รูปมาวางที่นี่</div>
           <input type="file" id="rf-images-dest" accept="image/*" multiple class="visually-hidden">
           <div class="preview-grid" id="preview-grid-dest"></div>
+        </div>
+        <div class="full">
           <div class="field-hint" id="image-size-hint"></div>
         </div>
       </div>
@@ -711,6 +713,27 @@
     }
     var legacy = r.images || [];
     return { origin: legacy, dest: legacy };
+  }
+  // Only Delivery Confirm and Export show the ต้นทาง/ปลายทาง tabs; Foreign always shows
+  // one combined photo list, even if that record happens to have split data already.
+  function groupIdSupportsOriginDest(groupId){
+    var g = groupById(groupId);
+    var n = String(g ? g.name : '').trim().toLowerCase();
+    return n === 'delivery confirm' || n === 'export';
+  }
+  function groupSupportsOriginDest(r){
+    return groupIdSupportsOriginDest(r.groupId);
+  }
+  function getAllRecordImages(r){
+    if(isSplitRecord(r)) return (r.imagesOrigin || []).concat(r.imagesDest || []);
+    return r.images || [];
+  }
+  function updateImageSectionLabels(groupId){
+    var split = groupIdSupportsOriginDest(groupId);
+    var lbl = $('#lbl-images-origin');
+    var wrap = $('#dest-images-wrap');
+    if(lbl) lbl.textContent = split ? 'รูปต้นทาง (ขึ้นสินค้า)' : 'แนบรูปภาพผลงาน';
+    if(wrap) wrap.style.display = split ? '' : 'none';
   }
 
   function $(sel, root){ return (root||document).querySelector(sel); }
@@ -830,7 +853,9 @@
     var bytes = estimateRecordBytes(pendingImagesOrigin.concat(pendingImagesDest));
     var hint = $('#image-size-hint');
     var kb = Math.round(bytes/1024);
-    hint.textContent = 'ขนาดข้อมูลรูปภาพของรายการนี้ (ต้นทาง+ปลายทาง): ~' + kb + ' KB (จำกัดไม่เกิน ~' + Math.round(MAX_RECORD_BYTES/1024) + ' KB ต่อ 1 รายการ)';
+    var split = groupIdSupportsOriginDest($('#rf-group').value);
+    var label = split ? 'ขนาดข้อมูลรูปภาพของรายการนี้ (ต้นทาง+ปลายทาง)' : 'ขนาดข้อมูลรูปภาพของรายการนี้';
+    hint.textContent = label + ': ~' + kb + ' KB (จำกัดไม่เกิน ~' + Math.round(MAX_RECORD_BYTES/1024) + ' KB ต่อ 1 รายการ)';
     hint.classList.toggle('warn', bytes > MAX_RECORD_BYTES * 0.8);
   }
 
@@ -880,6 +905,7 @@
       '</button>';
     }).join('');
     $('#rf-group').value = selectedId;
+    updateImageSectionLabels(selectedId);
   }
 
   function getFiltered(){
@@ -902,9 +928,9 @@
 
   function renderRecordCard(r){
     var group = groupById(r.groupId);
-    var imgSets = getRecordImageSets(r);
     var imagesHtml;
-    if(isSplitRecord(r)){
+    if(groupSupportsOriginDest(r) && isSplitRecord(r)){
+      var imgSets = getRecordImageSets(r);
       var activeTab = cardImageTab[r.id] === 'dest' ? 'dest' : 'origin';
       var activeImages = activeTab === 'dest' ? imgSets.dest : imgSets.origin;
       var imgTabsHtml =
@@ -918,8 +944,8 @@
           }).join('') + '</div>'
         : '<div class="record-images-empty">ยังไม่มีรูป' + (activeTab==='dest'?'ปลายทาง':'ต้นทาง') + '</div>');
     } else {
-      // Not yet separated into origin/destination — show as one plain set, same as before.
-      var all = imgSets.origin;
+      // Foreign group (always), or any record not yet split — one combined photo list.
+      var all = getAllRecordImages(r);
       imagesHtml = all.length
         ? '<div class="record-images">' + all.map(function(src,i){
             return '<img src="' + src + '" alt="" data-action="view-images" data-id="' + esc(r.id) + '" data-index="' + i + '">';
@@ -1337,9 +1363,14 @@
       else if(imgEl){
         var r = STATE.records.find(function(x){ return x.id === imgEl.getAttribute('data-id'); });
         if(r){
-          var sets = getRecordImageSets(r);
-          var tab = cardImageTab[r.id] === 'dest' ? 'dest' : 'origin';
-          var imgs = tab === 'dest' ? sets.dest : sets.origin;
+          var imgs;
+          if(groupSupportsOriginDest(r) && isSplitRecord(r)){
+            var sets = getRecordImageSets(r);
+            var tab = cardImageTab[r.id] === 'dest' ? 'dest' : 'origin';
+            imgs = tab === 'dest' ? sets.dest : sets.origin;
+          } else {
+            imgs = getAllRecordImages(r);
+          }
           if(imgs.length) openLightbox(imgs, Number(imgEl.getAttribute('data-index'))||0);
         }
       }

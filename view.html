@@ -510,6 +510,17 @@
     var legacy = r.images || [];
     return { origin: legacy, dest: legacy };
   }
+  // Only Delivery Confirm and Export show the ต้นทาง/ปลายทาง tabs; Foreign always shows
+  // one combined photo list, even if that record happens to have split data already.
+  function groupSupportsOriginDest(r){
+    var g = groupById(r.groupId);
+    var n = String(g ? g.name : '').trim().toLowerCase();
+    return n === 'delivery confirm' || n === 'export';
+  }
+  function getAllRecordImages(r){
+    if(isSplitRecord(r)) return (r.imagesOrigin || []).concat(r.imagesDest || []);
+    return r.images || [];
+  }
 
   function $(sel, root){ return (root||document).querySelector(sel); }
   function $all(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
@@ -667,9 +678,9 @@
 
   function renderRecordCard(r){
     var group = groupById(r.groupId);
-    var imgSets = getRecordImageSets(r);
     var imagesHtml;
-    if(isSplitRecord(r)){
+    if(groupSupportsOriginDest(r) && isSplitRecord(r)){
+      var imgSets = getRecordImageSets(r);
       var activeTab = cardImageTab[r.id] === 'dest' ? 'dest' : 'origin';
       var activeImages = activeTab === 'dest' ? imgSets.dest : imgSets.origin;
       var imgTabsHtml =
@@ -683,8 +694,8 @@
           }).join('') + '</div>'
         : '<div class="record-images-empty">ยังไม่มีรูป' + (activeTab==='dest'?'ปลายทาง':'ต้นทาง') + '</div>');
     } else {
-      // Not yet separated into origin/destination — show as one plain set, same as before.
-      var all = imgSets.origin;
+      // Foreign group (always), or any record not yet split — one combined photo list.
+      var all = getAllRecordImages(r);
       imagesHtml = all.length
         ? '<div class="record-images">' + all.map(function(src,i){
             return '<img src="' + src + '" alt="" data-action="view-images" data-id="' + esc(r.id) + '" data-index="' + i + '">';
@@ -828,9 +839,14 @@
       if(!imgEl) return;
       var r = STATE.records.find(function(x){ return x.id === imgEl.getAttribute('data-id'); });
       if(r){
-        var sets = getRecordImageSets(r);
-        var tab = cardImageTab[r.id] === 'dest' ? 'dest' : 'origin';
-        var imgs = tab === 'dest' ? sets.dest : sets.origin;
+        var imgs;
+        if(groupSupportsOriginDest(r) && isSplitRecord(r)){
+          var sets = getRecordImageSets(r);
+          var tab = cardImageTab[r.id] === 'dest' ? 'dest' : 'origin';
+          imgs = tab === 'dest' ? sets.dest : sets.origin;
+        } else {
+          imgs = getAllRecordImages(r);
+        }
         if(imgs.length) openLightbox(imgs, Number(imgEl.getAttribute('data-index'))||0);
       }
     });
