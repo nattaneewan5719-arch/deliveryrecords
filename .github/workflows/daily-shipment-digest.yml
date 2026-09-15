@@ -65,14 +65,14 @@ jobs:
           # NOTE: this repo is public, so the record content (customer names, addresses)
           # is intentionally never echoed to the workflow log below.
           records_text=$(echo "$records_json" | jq -r --argjson groups "$groups_json" '
-            def gname(gid):
-              ($groups.documents // [])
-              | map(select(.name | endswith("/groups/" + gid)))
-              | .[0].fields.name.stringValue // "-";
+            ( ($groups.documents // [])
+              | map({ (.name | sub(".*/groups/"; "")): (.fields.name.stringValue // "-") })
+              | add // {}
+            ) as $gmap |
             [.[] | select(.document != null) | .document.fields] as $all |
             [ $all[] |
               "• " + (.plate.stringValue // "-") +
-              " | " + gname((.groupId.stringValue // "")) +
+              " | " + ($gmap[(.groupId.stringValue // "")] // "-") +
               " | " + (.name.stringValue // "-") +
               " | " + ([.address.stringValue, .district.stringValue, .province.stringValue] | map(select(. != null and . != "")) | join(" "))
             ] | join("\n")
