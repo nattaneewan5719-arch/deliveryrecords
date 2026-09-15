@@ -2,10 +2,10 @@ name: Daily shipment email digest
 
 # Runs every morning and emails a summary of every delivery record whose
 # createdAt falls within "yesterday" in Asia/Bangkok time.
-# 07:00 Asia/Bangkok = 00:00 UTC.
+# 08:30 Asia/Bangkok = 01:30 UTC.
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '30 1 * * *'
   workflow_dispatch: {}
 
 jobs:
