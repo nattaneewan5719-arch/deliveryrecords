@@ -9,7 +9,6 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
   :root{
     color-scheme: dark;
@@ -669,29 +668,6 @@
   firebase.initializeApp(firebaseConfig);
   var db = firebase.firestore();
 
-  /* ---------------- EmailJS: notify by email on every new shipment record ---------------- */
-  var EMAILJS_PUBLIC_KEY = '26OuR1CnwgxRQ634q';
-  var EMAILJS_SERVICE_ID = 'tmt_service';
-  var EMAILJS_TEMPLATE_ID = 'template_cbajczc';
-  if (window.emailjs) { emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY }); }
-
-  function notifyNewRecordEmail(payload){
-    if (!window.emailjs) return;
-    var group = groupById(payload.groupId);
-    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      plate: payload.plate,
-      group_name: group ? group.name : '',
-      affiliation: payload.affiliation || '-',
-      customer_name: payload.name,
-      ship_date: formatThaiDate(payload.date),
-      address: payload.address || '-',
-      district: payload.district || '',
-      province: payload.province || ''
-    }).catch(function(err){
-      console.error('EmailJS send failed', err);
-    });
-  }
-
   var THAI_MONTHS =['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
   var MAX_TOTAL_BYTES = 1024 * 1024 * 1024; // ~1GB Firestore free tier, informational only
   var MAX_RECORD_BYTES = 900000; // stay safely under Firestore's 1MiB per-document hard limit
@@ -1186,7 +1162,6 @@
 
     var btn = $('#btn-submit-record'); btn.disabled = true;
     showToast('กำลังบันทึก...');
-    var isNewRecord = !(modalMode === 'edit' && editingId);
     var promise;
     if(modalMode === 'edit' && editingId){
       promise = db.collection('records').doc(editingId).set(payload, { merge: true });
@@ -1196,7 +1171,6 @@
     }
     promise.then(function(){
       showToast('บันทึกแล้ว');
-      if(isNewRecord) notifyNewRecordEmail(payload);
     }).catch(function(err){
       showToast('บันทึกไม่สำเร็จ: ' + err.message, true);
     }).then(function(){

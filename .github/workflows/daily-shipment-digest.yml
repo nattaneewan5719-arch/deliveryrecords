@@ -1,0 +1,105 @@
+name: Daily shipment email digest
+
+# Runs every morning and emails a summary of every delivery record whose
+# createdAt falls within "yesterday" in Asia/Bangkok time.
+# 07:00 Asia/Bangkok = 00:00 UTC.
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  send-digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build and send digest email
+        env:
+          EMAILJS_PRIVATE_KEY: ${{ secrets.EMAILJS_PRIVATE_KEY }}
+        run: |
+          set -e
+
+          FIRESTORE_PROJECT="deliveryrecords-52e00"
+          EMAILJS_PUBLIC_KEY="26OuR1CnwgxRQ634q"
+          EMAILJS_SERVICE_ID="tmt_service"
+          EMAILJS_TEMPLATE_ID="template_cbajczc"
+
+          if [ -z "$EMAILJS_PRIVATE_KEY" ]; then
+            echo "::error::EMAILJS_PRIVATE_KEY repo secret is not set. Add it under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+          start_ms=$(( $(TZ=Asia/Bangkok date -d "yesterday 00:00:00" +%s) * 1000 ))
+          end_ms=$(( $(TZ=Asia/Bangkok date -d "today 00:00:00" +%s) * 1000 ))
+          digest_date=$(TZ=Asia/Bangkok date -d "yesterday" +%d/%m/%Y)
+
+          echo "Digest date: $digest_date"
+
+          groups_json=$(curl -s "https://firestore.googleapis.com/v1/projects/$FIRESTORE_PROJECT/databases/(default)/documents/groups")
+
+          query=$(jq -n --arg start "$start_ms" --arg end "$end_ms" '{
+            structuredQuery: {
+              from: [{collectionId: "records"}],
+              where: {
+                compositeFilter: {
+                  op: "AND",
+                  filters: [
+                    {fieldFilter: {field: {fieldPath: "createdAt"}, op: "GREATER_THAN_OR_EQUAL", value: {integerValue: $start}}},
+                    {fieldFilter: {field: {fieldPath: "createdAt"}, op: "LESS_THAN", value: {integerValue: $end}}}
+                  ]
+                }
+              }
+            }
+          }')
+
+          records_json=$(curl -s -X POST "https://firestore.googleapis.com/v1/projects/$FIRESTORE_PROJECT/databases/(default)/documents:runQuery" \
+            -H "Content-Type: application/json" -d "$query")
+
+          count=$(echo "$records_json" | jq '[.[] | select(.document != null)] | length')
+          echo "Found $count record(s) for $digest_date"
+
+          if [ "$count" -eq 0 ]; then
+            echo "No shipments recorded yesterday — skipping email."
+            exit 0
+          fi
+
+          # NOTE: this repo is public, so the record content (customer names, addresses)
+          # is intentionally never echoed to the workflow log below.
+          records_text=$(echo "$records_json" | jq -r --argjson groups "$groups_json" '
+            def gname(gid):
+              ($groups.documents // [])
+              | map(select(.name | endswith("/groups/" + gid)))
+              | .[0].fields.name.stringValue // "-";
+            [.[] | select(.document != null) | .document.fields] as $all |
+            [ $all[] |
+              "• " + (.plate.stringValue // "-") +
+              " | " + gname((.groupId.stringValue // "")) +
+              " | " + (.name.stringValue // "-") +
+              " | " + ([.address.stringValue, .district.stringValue, .province.stringValue] | map(select(. != null and . != "")) | join(" "))
+            ] | join("\n")
+          ')
+
+          template_params=$(jq -n \
+            --arg digest_date "$digest_date" \
+            --arg record_count "$count" \
+            --arg records_text "$records_text" \
+            '{digest_date: $digest_date, record_count: $record_count, records_text: $records_text}')
+
+          send_body=$(jq -n \
+            --arg service_id "$EMAILJS_SERVICE_ID" \
+            --arg template_id "$EMAILJS_TEMPLATE_ID" \
+            --arg user_id "$EMAILJS_PUBLIC_KEY" \
+            --arg accessToken "$EMAILJS_PRIVATE_KEY" \
+            --argjson template_params "$template_params" \
+            '{service_id: $service_id, template_id: $template_id, user_id: $user_id, accessToken: $accessToken, template_params: $template_params}')
+
+          http_status=$(curl -s -o /tmp/emailjs_response.txt -w "%{http_code}" -X POST "https://api.emailjs.com/api/v1.0/email/send" \
+            -H "Content-Type: application/json" -d "$send_body")
+
+          echo "EmailJS response status: $http_status"
+          cat /tmp/emailjs_response.txt
+          echo ""
+
+          if [ "$http_status" != "200" ]; then
+            echo "::error::EmailJS send failed with status $http_status"
+            exit 1
+          fi
