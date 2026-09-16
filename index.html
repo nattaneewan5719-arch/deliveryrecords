@@ -698,7 +698,6 @@
   var cardImageTab = {}; // recordId -> 'origin' | 'dest'
   var lightboxImages = [];
   var lightboxIndex = 0;
-  var groupsSeeded = false;
   var recordsLoaded = false;
 
   // Legacy records only have a flat `images` array (from before the origin/destination
@@ -1015,15 +1014,6 @@
 
     db.collection('groups').onSnapshot(function(snap){
       setConnStatus('online', 'เชื่อมต่อแล้ว');
-      if(snap.empty && !groupsSeeded){
-        groupsSeeded = true;
-        // Fixed doc IDs + merge:true make this idempotent: even if two tabs/devices
-        // race to seed at the same time, they both write the same two documents
-        // instead of creating duplicates.
-        db.collection('groups').doc('g-chinese').set({ name:'ลูกค้าจีน', hue:0 }, { merge:true });
-        db.collection('groups').doc('g-foreign').set({ name:'ลูกค้าต่างประเทศ', hue:3 }, { merge:true });
-        return;
-      }
       STATE.groups = snap.docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); });
       render();
       if($('#modal-groups').classList.contains('open')) renderGroupsManage();
