@@ -725,12 +725,12 @@
     var legacy = r.images || [];
     return { origin: legacy, dest: legacy };
   }
-  // Only Delivery Confirm and Export show the ต้นทาง/ปลายทาง tabs; Foreign always shows
-  // one combined photo list, even if that record happens to have split data already.
+  // Only Delivery Confirm shows the ต้นทาง/ปลายทาง tabs; Foreign and Export always show
+  // one combined photo list, even if a record happens to have split data already.
   function groupIdSupportsOriginDest(groupId){
     var g = groupById(groupId);
     var n = String(g ? g.name : '').trim().toLowerCase();
-    return n === 'delivery confirm' || n === 'export';
+    return n === 'delivery confirm';
   }
   function groupSupportsOriginDest(r){
     return groupIdSupportsOriginDest(r.groupId);
