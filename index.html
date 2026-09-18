@@ -196,6 +196,11 @@
   .add-pill{background:transparent;border-style:dashed;}
 
   .result-count{text-align:center;color:var(--ink-dim);font-size:.82rem;margin-bottom:14px;}
+  .load-all-row{text-align:center;color:var(--ink-dim);font-size:.78rem;margin:-8px 0 16px;}
+  .load-all-row button{
+    background:none;border:none;color:var(--accent);font-size:.78rem;font-weight:600;cursor:pointer;padding:2px 4px;
+  }
+  .load-all-row button:hover{text-decoration:underline;}
 
   /* ---------- record list ---------- */
   .record-list{display:flex;flex-direction:column;gap:16px;}
@@ -535,6 +540,10 @@
   <div class="group-tabs" id="group-tabs"></div>
 
   <div class="result-count" id="result-count"></div>
+  <div class="load-all-row" id="load-all-row" style="display:none;">
+    กำลังแสดง <span id="load-all-count"></span> รายการล่าสุด เพื่อให้เปิดหน้าเว็บได้เร็วขึ้น ·
+    <button type="button" id="btn-load-all">โหลดข้อมูลทั้งหมด</button>
+  </div>
 
   <div class="record-list" id="record-list"></div>
   <div class="empty-state" id="empty-state" style="display:none;">
@@ -699,6 +708,9 @@
   var lightboxImages = [];
   var lightboxIndex = 0;
   var recordsLoaded = false;
+  var RECENT_LIMIT = 20; // fast initial load: most recent N records, full history loads on demand
+  var recordsFullyLoaded = false;
+  var recordsUnsub = null;
 
   // Legacy records only have a flat `images` array (from before the origin/destination
   // split) and have not been separated into origin/destination yet. New/edited records
@@ -801,6 +813,7 @@
   }
 
   function openDatePopover(){
+    loadAllRecords(); // calendar dots need the full date history, not just the recent page
     var base = filters.date ? filters.date.split('-') : null;
     var now = new Date();
     calView.y = base ? Number(base[0]) : now.getFullYear();
@@ -834,7 +847,7 @@
     var bytes = new Blob([JSON.stringify(STATE)]).size;
     var mb = bytes / (1024*1024);
     var pct = Math.min(100, (bytes / MAX_TOTAL_BYTES) * 100);
-    $('#storage-text').textContent = mb.toFixed(2) + ' MB / ~1 GB';
+    $('#storage-text').textContent = mb.toFixed(2) + ' MB' + (recordsFullyLoaded ? '' : ' (ที่โหลดแล้ว)') + ' / ~1 GB';
     $('#storage-fill').style.width = Math.max(pct, 1.2) + '%';
     var meter = $('#storage-meter');
     meter.classList.remove('warn','danger');
@@ -994,6 +1007,13 @@
 
     $('#result-count').textContent = 'พบ ' + list.length + ' รายการ';
 
+    var loadAllRow = $('#load-all-row');
+    if(loadAllRow){
+      var showLoadAll = !recordsFullyLoaded && STATE.records.length >= RECENT_LIMIT;
+      loadAllRow.style.display = showLoadAll ? '' : 'none';
+      if(showLoadAll) $('#load-all-count').textContent = STATE.records.length;
+    }
+
     if(list.length === 0){
       listEl.innerHTML = '';
       emptyEl.style.display = '';
@@ -1022,9 +1042,20 @@
       showToast('เชื่อมต่อฐานข้อมูลกลุ่มไม่สำเร็จ: ' + err.message, true);
     });
 
-    db.collection('records').onSnapshot(function(snap){
+    attachRecordsListener(false);
+  }
+
+  // Loads only the RECENT_LIMIT most recent records by default so the page opens fast
+  // even as photo data grows toward a year of history; loadAllRecords() upgrades this
+  // to the full collection on demand (search, date pick, or a specific group tab).
+  function attachRecordsListener(full){
+    if(recordsUnsub) recordsUnsub();
+    var q = db.collection('records').orderBy('createdAt', 'desc');
+    if(!full) q = q.limit(RECENT_LIMIT);
+    recordsUnsub = q.onSnapshot(function(snap){
       setConnStatus('online', 'เชื่อมต่อแล้ว');
       recordsLoaded = true;
+      recordsFullyLoaded = full;
       STATE.records = snap.docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); });
       render();
     }, function(err){
@@ -1033,6 +1064,12 @@
       showToast('เชื่อมต่อฐานข้อมูลรายการไม่สำเร็จ: ' + err.message, true);
       render();
     });
+  }
+
+  function loadAllRecords(){
+    if(recordsFullyLoaded) return;
+    showToast('กำลังโหลดข้อมูลทั้งหมด...');
+    attachRecordsListener(true);
   }
 
   /* ---------------- record modal ---------------- */
@@ -1249,9 +1286,22 @@
   }
 
   function exportData(){
-    var data = JSON.stringify(STATE, null, 2);
-    triggerDownload('delivery-records-backup-' + todayISO() + '.json', data);
-    showToast('ดาวน์โหลดไฟล์สำรองแล้ว');
+    // Fetch fresh & complete, independent of the (possibly paginated) live listener state,
+    // so the backup always contains every record regardless of what's currently loaded.
+    showToast('กำลังเตรียมไฟล์สำรอง...');
+    Promise.all([
+      db.collection('groups').get(),
+      db.collection('records').get()
+    ]).then(function(results){
+      var data = {
+        groups: results[0].docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); }),
+        records: results[1].docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); })
+      };
+      triggerDownload('delivery-records-backup-' + todayISO() + '.json', JSON.stringify(data, null, 2));
+      showToast('ดาวน์โหลดไฟล์สำรองแล้ว');
+    }).catch(function(err){
+      showToast('สำรองข้อมูลไม่สำเร็จ: ' + err.message, true);
+    });
   }
 
   function importData(file){
@@ -1370,7 +1420,11 @@
       var addBtn = e.target.closest('#tab-add-group');
       var pill = e.target.closest('.group-pill[data-group]');
       if(addBtn){ renderGroupsManage(); openModal('modal-groups'); return; }
-      if(pill){ filters.group = pill.getAttribute('data-group'); render(); }
+      if(pill){
+        filters.group = pill.getAttribute('data-group');
+        if(filters.group !== 'all') loadAllRecords(); // viewing one group should show its full history
+        render();
+      }
     });
 
     $('#btn-groups').addEventListener('click', function(){ renderGroupsManage(); openModal('modal-groups'); });
@@ -1384,7 +1438,12 @@
       if(btn && !btn.disabled) deleteGroup(btn.getAttribute('data-delete-group'));
     });
 
-    $('#f-search').addEventListener('input', function(e){ filters.q = e.target.value; render(); });
+    $('#f-search').addEventListener('input', function(e){
+      filters.q = e.target.value;
+      if(filters.q) loadAllRecords(); // search should cover full history, not just the recent page
+      render();
+    });
+    $('#btn-load-all').addEventListener('click', loadAllRecords);
 
     $('#f-date-btn').addEventListener('click', function(e){ e.stopPropagation(); toggleDatePopover(); });
     $('#dp-prev').addEventListener('click', function(){
