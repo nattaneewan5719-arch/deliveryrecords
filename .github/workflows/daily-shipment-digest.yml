@@ -54,28 +54,32 @@ jobs:
           records_json=$(curl -s -X POST "https://firestore.googleapis.com/v1/projects/$FIRESTORE_PROJECT/databases/(default)/documents:runQuery" \
             -H "Content-Type: application/json" -d "$query")
 
-          count=$(echo "$records_json" | jq '[.[] | select(.document != null)] | length')
-          echo "Found $count record(s) for $digest_date"
+          # Only records in the "Foreign" group are included in the digest.
+          foreign_json=$(echo "$records_json" | jq -c --argjson groups "$groups_json" '
+            ( ($groups.documents // [])
+              | map({ (.name | sub(".*/groups/"; "")): (.fields.name.stringValue // "-") })
+              | add // {}
+            ) as $gmap |
+            [ .[] | select(.document != null) | .document.fields
+              | select((($gmap[(.groupId.stringValue // "")] // "") | ascii_downcase) == "foreign") ]
+          ')
+
+          count=$(echo "$foreign_json" | jq 'length')
+          echo "Found $count Foreign record(s) for $digest_date"
 
           if [ "$count" -eq 0 ]; then
-            echo "No shipments recorded yesterday — skipping email."
+            echo "No Foreign shipments recorded yesterday — skipping email."
             exit 0
           fi
 
           # NOTE: this repo is public, so the record content (customer names, addresses)
           # is intentionally never echoed to the workflow log below.
-          records_text=$(echo "$records_json" | jq -r --argjson groups "$groups_json" '
-            ( ($groups.documents // [])
-              | map({ (.name | sub(".*/groups/"; "")): (.fields.name.stringValue // "-") })
-              | add // {}
-            ) as $gmap |
-            [.[] | select(.document != null) | .document.fields] as $all |
-            [ $all[] |
+          records_text=$(echo "$foreign_json" | jq -r '
+            map(
               "• " + (.plate.stringValue // "-") +
-              " | " + ($gmap[(.groupId.stringValue // "")] // "-") +
               " | " + (.name.stringValue // "-") +
               " | " + ([.address.stringValue, .district.stringValue, .province.stringValue] | map(select(. != null and . != "")) | join(" "))
-            ] | join("\n")
+            ) | join("\n")
           ')
 
           template_params=$(jq -n \
