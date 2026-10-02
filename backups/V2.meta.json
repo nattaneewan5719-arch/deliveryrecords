@@ -1,0 +1,7 @@
+{
+    "label":  "V2",
+    "savedAt":  "2026-10-02T19:25:10+07:00",
+    "groups":  3,
+    "records":  60,
+    "note":  "Snapshot only. Not loaded automatically by index.html or view.html. Restore manually later via the app import feature when needed."
+}
