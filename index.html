@@ -246,9 +246,90 @@
   .img-tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
   .img-tab-btn .tcount{opacity:.75;font-weight:500;}
 
-  .record-images{display:flex;gap:10px;overflow-x:auto;padding-bottom:2px;}
-  .record-images img{width:148px;height:106px;object-fit:cover;border-radius:12px;flex:none;cursor:pointer;border:1px solid var(--border);transition:transform .15s ease;display:block;}
-  .record-images img:hover{transform:scale(1.03);}
+  /* ---------- folder gallery: photos stacked in a folder, click to fan them out ---------- */
+  .fg{
+    --u:.55px;
+    --pw:calc(224 * var(--u));
+    --sp:max(8px, min(calc(var(--pw) * 1.16), calc((100cqw - var(--pw) - 28px) / var(--nm1))));
+    position:relative;container-type:inline-size;height:calc(396 * var(--u));
+    background:#0a0a0a;border-radius:14px;overflow:hidden;user-select:none;-webkit-user-select:none;
+  }
+  @media (max-width:640px){ .fg{--u:.5px;} }
+  .fg-stage{position:absolute;inset:0;pointer-events:none;}
+
+  .fg-back{
+    position:absolute;left:calc(50% - 160 * var(--u));bottom:calc(24 * var(--u));
+    width:calc(320 * var(--u));height:calc(224 * var(--u));pointer-events:none;
+    transition:opacity .3s ease,transform .3s ease;
+  }
+  .fg-back::before{
+    content:"";position:absolute;top:0;left:0;width:calc(128 * var(--u));height:calc(40 * var(--u));
+    background:linear-gradient(to top,#1e1e1e,#2a2a2a);border:1px solid rgba(255,255,255,.1);border-bottom:0;
+    border-radius:calc(12 * var(--u)) calc(12 * var(--u)) 0 0;
+  }
+  .fg-back::after{
+    content:"";position:absolute;top:calc(32 * var(--u));left:0;right:0;bottom:0;
+    background:linear-gradient(to bottom,#1e1e1e,#0a0a0a);border:1px solid rgba(255,255,255,.1);
+    border-radius:0 calc(12 * var(--u)) calc(12 * var(--u)) calc(12 * var(--u));
+    box-shadow:inset 0 0 calc(40 * var(--u)) rgba(0,0,0,.8);
+  }
+  .fg-back-inner{
+    position:absolute;z-index:1;top:calc(40 * var(--u));left:calc(8 * var(--u));right:calc(8 * var(--u));bottom:calc(8 * var(--u));
+    background:#000;border-radius:calc(8 * var(--u));
+  }
+  .fg.open .fg-back{opacity:0;transform:scale(.9);}
+
+  .fg-photos{position:absolute;inset:0;z-index:10;pointer-events:none;}
+  .fg-photo{
+    position:absolute;bottom:calc(40 * var(--u));left:calc(50% - 112 * var(--u));
+    width:var(--pw);height:calc(288 * var(--u));background:#111;
+    border:1px solid rgba(255,255,255,.2);border-radius:calc(12 * var(--u));overflow:hidden;
+    box-shadow:0 calc(20 * var(--u)) calc(40 * var(--u)) rgba(0,0,0,.5);
+    transform-origin:bottom center;z-index:calc(var(--i) + 10);
+    transform:translate(calc(var(--sx) * var(--u)),calc(var(--sy) * var(--u))) rotate(var(--sr)) scale(var(--ss));
+    transition:transform .5s cubic-bezier(.34,1.3,.5,1),opacity .3s ease;
+    pointer-events:none;touch-action:pan-y;
+  }
+  .fg-photo img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;}
+  .fg-photo.fg-extra{opacity:0;}
+  .fg:not(.open) .fg-stage:hover .fg-photo{
+    transform:translate(calc(var(--hx) * var(--u)),calc(var(--hy) * var(--u))) rotate(var(--hr)) scale(var(--ss));
+  }
+  .fg.open .fg-photo{
+    --ot:translate(calc(var(--ox) * var(--sp) + var(--dx, 0px)),calc(-22 * var(--u) + var(--dy, 0px)));
+    opacity:1;z-index:50;pointer-events:auto;cursor:grab;
+    transform:var(--ot) scale(1.05);
+  }
+  .fg.open .fg-photo:hover{z-index:100;transform:var(--ot) scale(1.1);}
+  .fg.open .fg-photo.dragging{z-index:150;cursor:grabbing;transition:none;transform:var(--ot) rotate(5deg) scale(1.15);}
+
+  .fg-front{
+    position:absolute;z-index:20;left:calc(50% - 170 * var(--u));bottom:0;width:calc(340 * var(--u));height:calc(176 * var(--u));
+    display:flex;align-items:flex-end;justify-content:center;padding:0 0 calc(32 * var(--u));overflow:hidden;
+    background:linear-gradient(to bottom,#2a2a2a,#111);border:1px solid rgba(255,255,255,.2);border-radius:calc(16 * var(--u));
+    box-shadow:inset 0 2px 10px rgba(255,255,255,.1),0 calc(-20 * var(--u)) calc(40 * var(--u)) rgba(0,0,0,.8);
+    cursor:pointer;pointer-events:auto;font:inherit;
+    transform-origin:bottom center;transition:transform .3s ease,opacity .3s ease;
+  }
+  .fg-front::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,rgba(255,255,255,.4),transparent);}
+  .fg-front:hover{transform:rotateX(-25deg) translateY(calc(10 * var(--u)));}
+  .fg-front:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+  .fg.open .fg-front{opacity:0;pointer-events:none;}
+  .fg-label{
+    padding:5px 11px;background:#000;border:1px solid rgba(0,0,0,.8);border-radius:8px;
+    color:rgba(255,255,255,.9);font-size:.72rem;font-weight:500;letter-spacing:.02em;white-space:nowrap;
+  }
+
+  .fg-hint{
+    position:absolute;z-index:30;left:50%;bottom:calc(12 * var(--u));
+    transform:translate(-50%,calc(40 * var(--u)));opacity:0;pointer-events:none;
+    padding:4px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);
+    color:rgba(255,255,255,.55);font:inherit;font-size:.66rem;font-weight:500;letter-spacing:.04em;white-space:nowrap;cursor:pointer;
+    transition:opacity .3s ease,transform .3s ease,color .15s ease;
+  }
+  .fg-hint:hover{color:#fff;}
+  .fg.open .fg-hint{opacity:1;transform:translate(-50%,0);pointer-events:auto;}
+
   .record-images-empty{font-size:.8rem;color:var(--ink-dim);font-style:italic;padding:6px 2px;}
 
   .empty-state{
@@ -739,6 +820,82 @@
     if(isSplitRecord(r)) return (r.imagesOrigin || []).concat(r.imagesDest || []);
     return r.images || [];
   }
+  // The photo list a card is currently showing (active ต้นทาง/ปลายทาง tab, or everything).
+  function getDisplayedImages(r){
+    if(groupSupportsOriginDest(r) && isSplitRecord(r)){
+      var sets = getRecordImageSets(r);
+      return cardImageTab[r.id] === 'dest' ? sets.dest : sets.origin;
+    }
+    return getAllRecordImages(r);
+  }
+
+  /* ---------------- folder gallery (photos stacked in a folder; click to fan out) ---------------- */
+  var folderOpen = {}; // recordId -> true while that card's folder is open
+
+  function folderGalleryHtml(r, images){
+    var n = images.length, m = Math.min(n, 5);
+    var photos = images.map(function(src, i){
+      var off = i - (n - 1) / 2;               // fan-out slot (open)
+      var so = Math.min(i, 4) - (m - 1) / 2;   // stacked slot (closed) - first 5 photos show
+      var style = '--i:' + i + ';--ox:' + off.toFixed(2) +
+        ';--sx:' + (so * 3).toFixed(2) + ';--sy:' + (so * -5).toFixed(2) + ';--sr:' + (so * 3).toFixed(2) + 'deg' +
+        ';--ss:' + (1 - Math.abs(so) * 0.03).toFixed(3) +
+        ';--hx:' + (so * 30).toFixed(2) + ';--hy:' + (so * -10 - 40).toFixed(2) + ';--hr:' + (so * 8).toFixed(2) + 'deg';
+      return '<div class="fg-photo' + (i >= 5 ? ' fg-extra' : '') + '" data-fg-img="' + i + '" data-id="' + esc(r.id) + '" style="' + style + '">' +
+        '<img src="' + src + '" alt="" draggable="false"></div>';
+    }).join('');
+    return '<div class="fg' + (folderOpen[r.id] ? ' open' : '') + '" data-id="' + esc(r.id) + '" style="--nm1:' + Math.max(n - 1, 1) + '">' +
+      '<div class="fg-stage">' +
+        '<div class="fg-back"><div class="fg-back-inner"></div></div>' +
+        '<div class="fg-photos">' + photos + '</div>' +
+        '<button type="button" class="fg-front" data-fg-open aria-label="เปิดโฟลเดอร์รูปภาพ"><span class="fg-label">' + esc(r.plate) + ' · ' + n + ' รูป</span></button>' +
+      '</div>' +
+      '<button type="button" class="fg-hint" data-fg-close>ลากรูปลงเพื่อปิด</button>' +
+    '</div>';
+  }
+
+  function setFolderOpen(id, open){
+    if(open) folderOpen[id] = true; else delete folderOpen[id];
+    $all('.fg').forEach(function(el){
+      if(el.getAttribute('data-id') === id) el.classList.toggle('open', !!open);
+    });
+  }
+
+  var fgDrag = null, fgJustDragged = false;
+  function bindFolderGallery(){
+    $('#record-list').addEventListener('pointerdown', function(e){
+      var photo = e.target.closest('.fg.open .fg-photo');
+      if(!photo || (e.pointerType === 'mouse' && e.button !== 0)) return;
+      fgDrag = { el: photo, x: e.clientX, y: e.clientY, moved: false };
+    });
+    document.addEventListener('pointermove', function(e){
+      if(!fgDrag) return;
+      var dx = e.clientX - fgDrag.x, dy = e.clientY - fgDrag.y;
+      if(!fgDrag.moved && Math.abs(dx) + Math.abs(dy) > 5){
+        fgDrag.moved = true;
+        fgDrag.el.classList.add('dragging');
+      }
+      if(fgDrag.moved){
+        fgDrag.el.style.setProperty('--dx', dx + 'px');
+        fgDrag.el.style.setProperty('--dy', dy + 'px');
+      }
+    });
+    function endDrag(e, cancelled){
+      if(!fgDrag) return;
+      var d = fgDrag; fgDrag = null;
+      d.el.classList.remove('dragging');
+      d.el.style.removeProperty('--dx');
+      d.el.style.removeProperty('--dy');
+      if(!d.moved) return;
+      fgJustDragged = true;
+      setTimeout(function(){ fgJustDragged = false; }, 0);
+      // dragging a photo down past the threshold closes the folder
+      if(!cancelled && e.clientY - d.y > 70) setFolderOpen(d.el.getAttribute('data-id'), false);
+    }
+    document.addEventListener('pointerup', function(e){ endDrag(e, false); });
+    document.addEventListener('pointercancel', function(e){ endDrag(e, true); });
+  }
+
   function updateImageSectionLabels(groupId){
     var split = groupIdSupportsOriginDest(groupId);
     var lbl = $('#lbl-images-origin');
@@ -951,18 +1108,12 @@
           '<button type="button" class="img-tab-btn' + (activeTab==='dest'?' active':'') + '" data-imgtab="dest" data-id="' + esc(r.id) + '">' + ICON_DEST + 'ปลายทาง <span class="tcount">(' + imgSets.dest.length + ')</span></button>' +
         '</div>';
       imagesHtml = imgTabsHtml + (activeImages.length
-        ? '<div class="record-images">' + activeImages.map(function(src,i){
-            return '<img src="' + src + '" alt="" data-action="view-images" data-id="' + esc(r.id) + '" data-index="' + i + '">';
-          }).join('') + '</div>'
+        ? folderGalleryHtml(r, activeImages)
         : '<div class="record-images-empty">ยังไม่มีรูป' + (activeTab==='dest'?'ปลายทาง':'ต้นทาง') + '</div>');
     } else {
       // Foreign group (always), or any record not yet split — one combined photo list.
       var all = getAllRecordImages(r);
-      imagesHtml = all.length
-        ? '<div class="record-images">' + all.map(function(src,i){
-            return '<img src="' + src + '" alt="" data-action="view-images" data-id="' + esc(r.id) + '" data-index="' + i + '">';
-          }).join('') + '</div>'
-        : '';
+      imagesHtml = all.length ? folderGalleryHtml(r, all) : '';
     }
     var locSub = [r.district, r.province].filter(Boolean).join(' ');
     var addressText = r.address ? esc(r.address) : '<span class="muted">— ไม่ระบุ —</span>';
@@ -1392,7 +1543,9 @@
     $('#record-list').addEventListener('click', function(e){
       var editBtn = e.target.closest('[data-action="edit"]');
       var delBtn = e.target.closest('[data-action="delete"]');
-      var imgEl = e.target.closest('[data-action="view-images"]');
+      var imgEl = e.target.closest('[data-fg-img]');
+      var openBtn = e.target.closest('[data-fg-open]');
+      var closeBtn = e.target.closest('[data-fg-close]');
       var tabBtn = e.target.closest('[data-imgtab]');
       if(editBtn) openEditModal(editBtn.getAttribute('data-id'));
       else if(delBtn) deleteRecord(delBtn.getAttribute('data-id'));
@@ -1400,18 +1553,14 @@
         cardImageTab[tabBtn.getAttribute('data-id')] = tabBtn.getAttribute('data-imgtab');
         render();
       }
+      else if(openBtn) setFolderOpen(openBtn.closest('.fg').getAttribute('data-id'), true);
+      else if(closeBtn) setFolderOpen(closeBtn.closest('.fg').getAttribute('data-id'), false);
       else if(imgEl){
+        if(fgJustDragged) return; // the click that ends a drag should not open the lightbox
         var r = STATE.records.find(function(x){ return x.id === imgEl.getAttribute('data-id'); });
         if(r){
-          var imgs;
-          if(groupSupportsOriginDest(r) && isSplitRecord(r)){
-            var sets = getRecordImageSets(r);
-            var tab = cardImageTab[r.id] === 'dest' ? 'dest' : 'origin';
-            imgs = tab === 'dest' ? sets.dest : sets.origin;
-          } else {
-            imgs = getAllRecordImages(r);
-          }
-          if(imgs.length) openLightbox(imgs, Number(imgEl.getAttribute('data-index'))||0);
+          var imgs = getDisplayedImages(r);
+          if(imgs.length) openLightbox(imgs, Number(imgEl.getAttribute('data-fg-img'))||0);
         }
       }
     });
@@ -1500,6 +1649,7 @@
   }
 
   bindEvents();
+  bindFolderGallery();
   render();
   initSync();
 })();
